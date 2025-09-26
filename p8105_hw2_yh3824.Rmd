@@ -5,15 +5,50 @@ date: "2025-09-26"
 output: github_document
 ---
 
-# Problem 1
+## Problem 1
 
 Install libraries
 ```{r}
 library(tidyverse)
 ```
 
-Upload Datasets
+Upload and clean pols-month.csv dataset
 ```{r}
+pols_df = 
+  read_csv("fivethirtyeight_datasets/pols-month.csv") |> 
+  janitor::clean_names() |> 
+  separate(mon,into = c("year", "month", "day"), sep = "-", convert = TRUE) |> 
+  mutate(month = month.name[month], president = prez_dem, prez_gop ) |>   
+  select(-day, -prez_dem, - prez_gop)
+```
 
+
+upload and clean snp.csv dataset
+```{r}
+snp_df = 
+  read_csv("fivethirtyeight_datasets/snp.csv") |> 
+  janitor::clean_names() |> 
+  separate(date, into = c("month", "day", "year"), sep = "/", convert = TRUE) |>
+  select(year, month, everything()) |> 
+  mutate(month = month.name[month], 
+         year = ifelse(year < 30, year + 2000, year + 1900)
+         )
+```
+
+upload and clean unemployment.csv 
+```{r}
+unemploy_df = 
+  read_csv("fivethirtyeight_datasets/unemployment.csv") |> 
+  janitor::clean_names() |> 
+  pivot_longer(jan:dec, 
+               names_to = "month", 
+               values_to = "unemployment %") |> 
+  mutate(month = month.name[match(tolower(month), tolower(month.abb))])
+```
+
+Join the datasets by merging snp into pols, and merging unemployment into the result.
+```{r}
+prob1_df =
+  left_join(snp_df, pols_df, by = "year")
 ```
 
