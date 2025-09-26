@@ -58,7 +58,7 @@ prob1_df =
 import in mr trash wheel dataset 
 ```{r}
 mrtrashwheel_df = 
-  read_excel("202409 Trash Wheel Collection Data.xlsx", na = c(".", "NA", ""))
+  read_excel("202409 Trash Wheel Collection Data.xlsx")
 ```
 
 specify the sheet in the Excel file and to omit non-data entries (rows with notes / figures; columns containing notes) using arguments in read_excel
