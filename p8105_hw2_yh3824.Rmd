@@ -10,6 +10,7 @@ output: github_document
 Install libraries
 ```{r}
 library(tidyverse)
+library(readxl)
 ```
 
 Upload and clean pols-month.csv dataset
@@ -46,9 +47,21 @@ unemploy_df =
   mutate(month = month.name[match(tolower(month), tolower(month.abb))])
 ```
 
-Join the datasets by merging snp into pols, and merging unemployment into the result.
+Join the datasets by merging snp into pols, and merging unemployment into the result. (NEED TO COME BACK HERE TO SEE WHAT KIND OF JOIN TO USE)
 ```{r}
 prob1_df =
   left_join(snp_df, pols_df, by = "year")
 ```
 
+## Problem 2
+
+import in mr trash wheel dataset 
+```{r}
+mrtrashwheel_df = 
+  read_excel("202409 Trash Wheel Collection Data.xlsx", na = c(".", "NA", ""))
+```
+
+specify the sheet in the Excel file and to omit non-data entries (rows with notes / figures; columns containing notes) using arguments in read_excel
+use reasonable variable names
+omit rows that do not include dumpster-specific data
+round the number of sports balls to the nearest integer and converts the result to an integer variable (using as.integer)
