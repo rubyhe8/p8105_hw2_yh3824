@@ -55,13 +55,41 @@ prob1_df =
 
 ## Problem 2
 
-import in mr trash wheel dataset 
+import and clean mr trash wheel dataset 
 ```{r}
-mrtrashwheel_df = 
-  read_excel("202409 Trash Wheel Collection Data.xlsx")
+mrtrash_df = 
+  read_excel("202409 Trash Wheel Collection Data.xlsx", 
+             sheet = "Mr. Trash Wheel", 
+             skip = 1, n_max = 651) |> 
+  janitor::clean_names() |>  
+  janitor::remove_empty(which = "cols") |> 
+  mutate(sports_balls = as.integer(round(sports_balls)))
+  
 ```
 
-specify the sheet in the Excel file and to omit non-data entries (rows with notes / figures; columns containing notes) using arguments in read_excel
-use reasonable variable names
-omit rows that do not include dumpster-specific data
-round the number of sports balls to the nearest integer and converts the result to an integer variable (using as.integer)
+import and clean professor trash wheel dataset
+```{r}
+proftrash_df = 
+  read_excel("202409 Trash Wheel Collection Data.xlsx", 
+             sheet = "Professor Trash Wheel", 
+             skip = 1,  n_max = 118) |> 
+  janitor::clean_names()
+```
+
+
+import and clean gwynnda trash wheel dataset 
+```{r}
+gwynnda_df = 
+  read_excel("202409 Trash Wheel Collection Data.xlsx", 
+             sheet = "Gwynnda Trash Wheel", 
+             skip = 1, n_max = 263) |> 
+  janitor::clean_names()
+```
+
+combine datasets 
+```{r}
+fulltrash_df = 
+  left_join(mrtrash_df, proftrash_df, gwynnda_df, by = "dumpster")
+  
+```
+
