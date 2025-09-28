@@ -93,3 +93,4 @@ fulltrash_df =
   
 ```
 
+## Problem 3
