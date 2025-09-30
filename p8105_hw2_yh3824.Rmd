@@ -94,3 +94,45 @@ fulltrash_df =
 ```
 
 ## Problem 3
+
+import zip code data
+```{r}
+zipcode_df = 
+  read_csv("zillow_data/Zip Codes.csv") |> 
+  janitor::clean_names() |> 
+  mutate(zip_code = as.integer(zip_code)) |> 
+  select(-state_fips, - county_code, -county_fips)
+
+zori_df =
+  read_csv("zillow_data/Zip_Zori_uc_sfrcondomfr_sm_month_NYC.csv") |> 
+  janitor::clean_names() |> 
+  mutate(zip_code = as.integer(region_name)) |> 
+  pivot_longer(x2015_01_31:x2024_08_31, 
+               names_to = "date", 
+               values_to = "rent") |> 
+  select(-size_rank, -metro, -region_id, -region_name, -region_type, -state_name, -state, -city) |> 
+  mutate(county_name = str_remove(county_name, 
+                                  regex(" county$", ignore_case = TRUE))) |> 
+  rename(county = county_name) 
+  
+  
+
+glimpse(zipcode_df)
+
+```
+
+Arrange both datasets to have zip code, county in the first columns 
+```{r}
+zipcode_df |> 
+  select(zip_code, county, neighborhood, everything())
+
+zori_df |> 
+  select(zip_code, county, date, rent, everything())
+```
+
+combine datasets 
+```{r}
+tidy_zillow = 
+  full_join(zipcode_df, zori_df, by = "zip_code")
+```
+
