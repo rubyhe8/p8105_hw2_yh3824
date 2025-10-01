@@ -19,10 +19,16 @@ pols_df =
   read_csv("fivethirtyeight_datasets/pols-month.csv") |> 
   janitor::clean_names() |> 
   separate(mon,into = c("year", "month", "day"), sep = "-", convert = TRUE) |> 
-  mutate(month = month.name[month], president = prez_dem, prez_gop ) |>   
-  select(-day, -prez_dem, - prez_gop)
+  mutate(month = month.name[month]) |> 
+  pivot_longer(
+    cols = starts_with("prez"),
+    names_to = "president",
+    values_to = "prez_values",
+    names_prefix = "prez_"
+    ) |>  
+  filter(prez_values == "1") |> 
+  select(-day, -prez_values)
 ```
-
 
 upload and clean snp.csv dataset
 ```{r}
@@ -30,7 +36,7 @@ snp_df =
   read_csv("fivethirtyeight_datasets/snp.csv") |> 
   janitor::clean_names() |> 
   separate(date, into = c("month", "day", "year"), sep = "/", convert = TRUE) |>
-  select(year, month, everything()) |> 
+  select(year, month, close) |> 
   mutate(month = month.name[month], 
          year = ifelse(year < 30, year + 2000, year + 1900)
          )
@@ -47,92 +53,150 @@ unemploy_df =
   mutate(month = month.name[match(tolower(month), tolower(month.abb))])
 ```
 
-Join the datasets by merging snp into pols, and merging unemployment into the result. (NEED TO COME BACK HERE TO SEE WHAT KIND OF JOIN TO USE)
+Join the datasets by merging snp into pols, and merging unemployment into the result. 
 ```{r}
-prob1_df =
-  left_join(snp_df, pols_df, by = "year")
+pol_combined_df =
+  left_join(pols_df, snp_df, by = c("year", "month")) |> 
+  left_join(unemploy_df, by = c("year", "month"))
 ```
 
-## Problem 2
 
+### Write Up
+
+The `pols_df`dataset contained information about the number of democratic and republican politicians at any given time. After tidying up the dataset, `r nrow(pols_df)` observations were included with `r ncol(pols_df)` variables. This included the new `president` variable which listed if the president was either democratic or republican at the specific month/year. 
+
+The `snp_df` dataset contained information about the S&P stock market index. After tidying up the dataset, `r nrow(snp_df)` observations were included with `r ncol(snp_df)` variables. 
+
+The `unemploy_df` contained information about the percentage of unemployment in the given month of that year. Following tidying up the data and using a `pivot_longer` we can see that there are `r nrow(unemploy_df)` observations and `r ncol(unemploy_df)` variables. 
+
+Using a `left_join` we can see that the final `pol_combined_df` has `r nrow(pol_combined_df)` observations and `r ncol(pol_combined_df)` variables. The earliest year recorded is `r min(pol_combined_df$year)` and the most recent year recorded is `r max(pol_combined_df$year)`. Important variables in the `pol_combined_df` include `year`, `month`, `unemployment %`, and `close`. 
+
+
+## Problem 2
 import and clean mr trash wheel dataset 
 ```{r}
 mrtrash_df = 
-  read_excel("202409 Trash Wheel Collection Data.xlsx", 
-             sheet = "Mr. Trash Wheel", 
-             skip = 1, n_max = 651) |> 
+  read_excel("202509 Trash Wheel Collection Data.xlsx", 
+             sheet = "Mr. Trash Wheel",   
+             skip = 1) |> 
   janitor::clean_names() |>  
   janitor::remove_empty(which = "cols") |> 
-  mutate(sports_balls = as.integer(round(sports_balls)))
+  drop_na(dumpster) |> 
+  mutate(sports_balls = as.integer(round(sports_balls)), 
+         year = as.numeric(year), 
+         trashwheel = "Mr. Trash Wheel")
   
 ```
 
 import and clean professor trash wheel dataset
 ```{r}
 proftrash_df = 
-  read_excel("202409 Trash Wheel Collection Data.xlsx", 
+  read_excel("202509 Trash Wheel Collection Data.xlsx", 
              sheet = "Professor Trash Wheel", 
-             skip = 1,  n_max = 118) |> 
-  janitor::clean_names()
+             skip = 1) |> 
+  janitor::clean_names() |> 
+  drop_na(dumpster) |> 
+  mutate(trashwheel = "Professor Trash Wheel")
 ```
 
 
 import and clean gwynnda trash wheel dataset 
 ```{r}
 gwynnda_df = 
-  read_excel("202409 Trash Wheel Collection Data.xlsx", 
-             sheet = "Gwynnda Trash Wheel", 
-             skip = 1, n_max = 263) |> 
-  janitor::clean_names()
+  read_excel("202509 Trash Wheel Collection Data.xlsx", 
+             sheet = "Gwynns Falls Trash Wheel", 
+             skip = 1) |> 
+  janitor::clean_names() |> 
+  drop_na(dumpster) |> 
+  mutate(trashwheel = "Gwynns Falls Trash Wheel")
 ```
 
 combine datasets 
 ```{r}
 fulltrash_df = 
-  left_join(mrtrash_df, proftrash_df, gwynnda_df, by = "dumpster")
+  bind_rows(mrtrash_df, proftrash_df, gwynnda_df) |> 
+  select(dumpster, trashwheel, everything())
   
 ```
 
+
+### Write Up
+
+The `fulltrash_df` combines the information collected in the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynn Falls trash wheel. The full trash wheel dataset has `r nrow(fulltrash_df)` number of observations.The total number of variables is `r ncol(fulltrash_df)`.  Information about `weight_tons`, and `volume_cubic_yards` collected in each trash wheel sit was reported as well as number of plastic bottles, polystyrene, cigarette butts, glass bottles, plastic bags, and wrappers collected at each site. Sports balls were only collected at Mr. Trash Wheel, and not the others. The dataset also includes information on the number of homes powered through the trash wheels. 
+
+The total weight of trash collected by Professor Trash Wheel is `r sum(filter(fulltrash_df, trashwheel == "Professor Trash Wheel") |>  pull(weight_tons))` tons. 
+The total number of cigarette butts collected by Gwynnda in June of 2022 is `r prettyNum(sum(filter(fulltrash_df, trashwheel == "Gwynns Falls Trash Wheel", year == 2022, month == "June") |> pull(cigarette_butts)))`.
+
+
 ## Problem 3
 
-import zip code data
+import and clean zip code data
 ```{r}
 zipcode_df = 
   read_csv("zillow_data/Zip Codes.csv") |> 
   janitor::clean_names() |> 
   mutate(zip_code = as.integer(zip_code)) |> 
-  select(-state_fips, - county_code, -county_fips)
+  select(-state_fips, - county_code, -county_fips, -file_date)
+```
 
+import and clean zori data
+```{r}
 zori_df =
   read_csv("zillow_data/Zip_Zori_uc_sfrcondomfr_sm_month_NYC.csv") |> 
   janitor::clean_names() |> 
   mutate(zip_code = as.integer(region_name)) |> 
   pivot_longer(x2015_01_31:x2024_08_31, 
                names_to = "date", 
-               values_to = "rent") |> 
-  select(-size_rank, -metro, -region_id, -region_name, -region_type, -state_name, -state, -city) |> 
-  mutate(county_name = str_remove(county_name, 
+               values_to = "zori",
+               names_prefix = "x") |> 
+  separate(date, into = c("year", "month", "day"), sep = "_", convert = TRUE) |> 
+  rename(county = county_name) |> 
+  mutate(county = str_remove(county, 
                                   regex(" county$", ignore_case = TRUE))) |> 
-  rename(county = county_name) 
-  
-  
-
-glimpse(zipcode_df)
-
-```
-
-Arrange both datasets to have zip code, county in the first columns 
-```{r}
-zipcode_df |> 
-  select(zip_code, county, neighborhood, everything())
-
-zori_df |> 
-  select(zip_code, county, date, rent, everything())
+  select(county, zip_code, year, month, zori) 
 ```
 
 combine datasets 
 ```{r}
 tidy_zillow = 
-  full_join(zipcode_df, zori_df, by = "zip_code")
+  left_join(zipcode_df, zori_df, by = c("county", "zip_code"))
 ```
 
+
+### Write Up
+
+In the final tidy `tidy_zillow` dataset, there was a total of `r nrow(tidy_zillow)` observations and `r ncol(tidy_zillow)` variables. There are a total of `r n_distinct(tidy_zillow$zip_code)` unique zip codes, and `r n_distinct(tidy_zillow$neighborhood)` unique neighborhoods. 
+
+Which zip codes are in zipcode_df but not zori_df 
+```{r}
+zipcode_only =
+  anti_join(zipcode_df, zori_df, by = "zip_code") |> 
+  select(zip_code)
+```
+
+171 zip codes are in the zip code dataset, but not the zillow rental price dataset. This is probably because the zip code dataset includes ALL zipcodes in New York, while the zillow dataset only includes those that have rental properties attached to them. The zillow dataset is not the most comprehensive reporting of all zip codes. For example, the 11430 zip code refers to JFK airport, so it would make sense that it isn't included in the zillow dataset as there are no rental spaces there. Additionally, some zip codes may be for PO boxes that are not for a home that can be rented. 
+
+Compare rental prices in Jan 2021 to Jan 2020 
+```{r}
+rent_change = tidy_zillow  |> 
+  filter(month == 1, year %in% c(2020, 2021))  |>
+  select(zip_code, county, neighborhood, year, zori) |> 
+  pivot_wider(
+    id_cols = c(zip_code, county, neighborhood),
+    names_from = year,
+    values_from = zori,
+    names_prefix = "rent_"
+  )  |> 
+  mutate(change = rent_2021 - rent_2020) |> 
+  arrange(change)
+```
+
+Make table with 10 largest price drops from Jan 2020 to 2021 
+```{r}
+top_10 = rent_change |> 
+  slice_head(n = 10)
+
+top_10
+```
+
+The largest price drop from Jan 2020 to Jan 2021 is `r round(min(pull(rent_change, change), na.rm = TRUE))` in Lower Manhattan, in the zip code 10007. The average price drop is `r round(mean(pull(rent_change, change), na.rm = TRUE))`. All of the largest price drops were in New York county, 3 of which were in the Lower Manhattan neighborhood. 
