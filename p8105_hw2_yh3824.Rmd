@@ -122,7 +122,7 @@ fulltrash_df =
 
 ### Write Up
 
-The `fulltrash_df` combines the information collected in the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynn Falls trash wheel. The full trash wheel dataset has `r nrow(fulltrash_df)` number of observations.The total number of variables is `r ncol(fulltrash_df)`.  Information about `weight_tons`, and `volume_cubic_yards` collected in each trash wheel sit was reported as well as number of plastic bottles, polystyrene, cigarette butts, glass bottles, plastic bags, and wrappers collected at each site. Sports balls were only collected at Mr. Trash Wheel, and not the others. The dataset also includes information on the number of homes powered through the trash wheels. 
+The `fulltrash_df` combines the information collected in the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynn Falls trash wheel. The full trash wheel dataset has `r nrow(fulltrash_df)` number of observations.The total number of variables is `r ncol(fulltrash_df)`.  Information about `weight_tons`, and `volume_cubic_yards` collected in each trash wheel was reported as well as number of plastic bottles, polystyrene, cigarette butts, glass bottles, plastic bags, and wrappers collected at each site. Sports balls were only collected at Mr. Trash Wheel, and not the others. The dataset also includes information on the number of homes powered through the trash wheels. 
 
 The total weight of trash collected by Professor Trash Wheel is `r sum(filter(fulltrash_df, trashwheel == "Professor Trash Wheel") |>  pull(weight_tons))` tons. 
 The total number of cigarette butts collected by Gwynnda in June of 2022 is `r prettyNum(sum(filter(fulltrash_df, trashwheel == "Gwynns Falls Trash Wheel", year == 2022, month == "June") |> pull(cigarette_butts)))`.
@@ -172,9 +172,12 @@ Which zip codes are in zipcode_df but not zori_df
 zipcode_only =
   anti_join(zipcode_df, zori_df, by = "zip_code") |> 
   select(zip_code)
+
 ```
 
-171 zip codes are in the zip code dataset, but not the zillow rental price dataset. This is probably because the zip code dataset includes ALL zipcodes in New York, while the zillow dataset only includes those that have rental properties attached to them. The zillow dataset is not the most comprehensive reporting of all zip codes. For example, the 11430 zip code refers to JFK airport, so it would make sense that it isn't included in the zillow dataset as there are no rental spaces there. Additionally, some zip codes may be for PO boxes that are not for a home that can be rented. 
+171 zip codes are in the zip code dataset, but not the zillow rental price dataset. 
+
+This is probably because the zip code dataset includes ALL zipcodes in New York, while the zillow dataset only includes those that have rental properties attached to them. The zillow dataset is not the most comprehensive reporting of all zip codes. For example, the 11430 zip code refers to JFK airport, so it would make sense that it isn't included in the zillow dataset as there are no rental spaces there. Additionally, some zip codes may be for PO boxes that are not for a home that can be rented. 
 
 Compare rental prices in Jan 2021 to Jan 2020 
 ```{r}
@@ -187,16 +190,16 @@ rent_change = tidy_zillow  |>
     values_from = zori,
     names_prefix = "rent_"
   )  |> 
-  mutate(change = rent_2021 - rent_2020) |> 
-  arrange(change)
+  mutate(change = rent_2020 - rent_2021) |> 
+  arrange(desc(change))
 ```
 
 Make table with 10 largest price drops from Jan 2020 to 2021 
 ```{r}
 top_10 = rent_change |> 
-  slice_head(n = 10)
+  slice_head(n = 10) 
 
 top_10
 ```
 
-The largest price drop from Jan 2020 to Jan 2021 is `r round(min(pull(rent_change, change), na.rm = TRUE))` in Lower Manhattan, in the zip code 10007. The average price drop is `r round(mean(pull(rent_change, change), na.rm = TRUE))`. All of the largest price drops were in New York county, 3 of which were in the Lower Manhattan neighborhood. 
+The largest price drop from Jan 2020 to Jan 2021 is `r round(max(pull(rent_change, change), na.rm = TRUE))` in Lower Manhattan, in the zip code 10007. The average price drop is `r round(mean(pull(rent_change, change), na.rm = TRUE))`. All of the largest price drops were in New York county, 3 of which were in the Lower Manhattan neighborhood. 
