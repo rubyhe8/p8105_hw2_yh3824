@@ -136,7 +136,8 @@ zipcode_df =
   read_csv("zillow_data/Zip Codes.csv") |> 
   janitor::clean_names() |> 
   mutate(zip_code = as.integer(zip_code)) |> 
-  select(-state_fips, - county_code, -county_fips, -file_date)
+  select(-state_fips, - county_code, -county_fips, -file_date) |> 
+  distinct(zip_code, .keep_all = TRUE)
 ```
 
 import and clean zori data
@@ -159,7 +160,9 @@ zori_df =
 combine datasets 
 ```{r}
 tidy_zillow = 
-  left_join(zipcode_df, zori_df, by = c("county", "zip_code"))
+  left_join(zipcode_df, zori_df, by = "zip_code") |> 
+  mutate(county = coalesce(county.x, county.y)) |> 
+  select(county, -county.x, -county.y, neighborhood, zip_code, year, month, zori)
 ```
 
 
@@ -175,7 +178,7 @@ zipcode_only =
 
 ```
 
-171 zip codes are in the zip code dataset, but not the zillow rental price dataset. 
+`r nrow(zipcode_only)` zip codes are in the zip code dataset, but not the zillow rental price dataset. The zip codes that are in `zipcode_df` but not `zori_df` are `r paste(zipcode_only$zip_code, collapse = ", ")`
 
 This is probably because the zip code dataset includes ALL zipcodes in New York, while the zillow dataset only includes those that have rental properties attached to them. The zillow dataset is not the most comprehensive reporting of all zip codes. For example, the 11430 zip code refers to JFK airport, so it would make sense that it isn't included in the zillow dataset as there are no rental spaces there. Additionally, some zip codes may be for PO boxes that are not for a home that can be rented. 
 
